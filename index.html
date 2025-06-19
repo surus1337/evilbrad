@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code Runner: Escape from Brad</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-container">
+        <canvas id="gameCanvas" width="1000" height="700"></canvas>
+        <div class="game-info">
+            <div class="score">Lines of Code: <span id="score">0</span></div>
+            <div class="level">Level: <span id="level">1</span></div>
+            <div class="status">Status: <span id="status">Ready to Code!</span></div>
+        </div>
+        <div class="game-controls">
+            <h3>Mission Brief:</h3>
+            <p>Brad the evil manager is on the prowl! Write code at computers while avoiding him!</p>
+            <p class="controls">← → ↑ ↓ Move | SPACE Start Coding (at computer)</p>
+            <button id="startButton">Start Game</button>
+        </div>
+    </div>
+    <script src="game.js"></script>
+</body>
+</html> 
