@@ -49,6 +49,12 @@ let lawyer = null;
 let complianceTraps = [];
 let soundEffects = [];
 
+// Multiple rooms system
+let currentRoom = 'main';
+let rooms = {};
+let doorways = [];
+let roomTransitions = [];
+
 // Input handling
 const keys = {};
 document.addEventListener('keydown', (e) => {
@@ -81,6 +87,8 @@ function initLevel(levelNum) {
     decorations = [];
     complianceTraps = [];
     soundEffects = [];
+    doorways = [];
+    roomTransitions = [];
     player.coding = false;
     player.codingProgress = 0;
     player.currentComputer = null;
@@ -91,9 +99,10 @@ function initLevel(levelNum) {
     powerUpActive = false;
     powerUpTimer = 0;
     screenShake = 0;
+    currentRoom = 'main';
     
-    // Create larger office layout
-    createOfficeLayout();
+    // Create multiple connected office rooms
+    createMultiRoomOffice();
     
     // Create break room
     breakRoom = {
@@ -134,7 +143,7 @@ function initLevel(levelNum) {
             width: 32,
             height: 32,
             codeWritten: 0,
-            codeRequired: levelNum === 1 ? 50 : 80 + (levelNum * 20), // Progressive difficulty
+            codeRequired: levelNum === 1 ? 50 : 60 + (levelNum * 15), // More gradual difficulty
             completed: false,
             isRequired: false
         });
@@ -239,27 +248,30 @@ function initLevel(levelNum) {
         }
     }
     
-    // Create Brads with adjusted speeds (slower)
+    // Create Brads with adjusted speeds - gentler difficulty curve
     if (levelNum === 1) {
         brads.push(createBrad(300, 300, 1.2, 'smart-patrol', 150));
     } else if (levelNum === 2) {
+        // Even gentler - just one Brad with slightly increased stats
+        brads.push(createBrad(500, 300, 1.3, 'smart-patrol', 170));
+    } else if (levelNum === 3) {
+        // Introduce predictive behavior
         brads.push(createBrad(200, 200, 1.4, 'smart-patrol', 180));
         brads.push(createBrad(700, 500, 1.4, 'predictive', 200));
-    } else if (levelNum === 3) {
-        brads.push(createBrad(200, 200, 1.6, 'smart-patrol', 220));
-        brads.push(createBrad(700, 500, 1.6, 'predictive', 240));
-        brads.push(createBrad(500, 350, 1.5, 'interceptor', 260));
+        brads.push(createBrad(500, 350, 1.35, 'smart-patrol', 190));
     } else if (levelNum === 4) {
-        brads.push(createBrad(150, 150, 1.8, 'interceptor', 280));
-        brads.push(createBrad(850, 150, 1.8, 'smart-patrol', 280));
-        brads.push(createBrad(150, 550, 1.8, 'predictive', 280));
-        brads.push(createBrad(850, 550, 1.7, 'interceptor', 300));
+        // Introduce interceptor behavior
+        brads.push(createBrad(150, 150, 1.6, 'interceptor', 240));
+        brads.push(createBrad(850, 150, 1.6, 'smart-patrol', 240));
+        brads.push(createBrad(150, 550, 1.6, 'predictive', 260));
+        brads.push(createBrad(850, 550, 1.5, 'interceptor', 280));
     } else if (levelNum >= 5) {
-        brads.push(createBrad(150, 150, 2.2, 'interceptor', 350));
-        brads.push(createBrad(850, 150, 2.2, 'interceptor', 350));
-        brads.push(createBrad(150, 550, 2.2, 'predictive', 350));
-        brads.push(createBrad(850, 550, 2.2, 'predictive', 350));
-        brads.push(createBrad(500, 350, 2.5, 'mastermind', 400));
+        // Insanely hard - full chaos
+        brads.push(createBrad(150, 150, 2.0, 'interceptor', 320));
+        brads.push(createBrad(850, 150, 2.0, 'interceptor', 320));
+        brads.push(createBrad(150, 550, 2.0, 'predictive', 340));
+        brads.push(createBrad(850, 550, 2.0, 'predictive', 340));
+        brads.push(createBrad(500, 350, 2.3, 'mastermind', 400));
     }
     
     // Reset player position
@@ -271,14 +283,16 @@ function initLevel(levelNum) {
     createSoundEffect(canvas.width/2, 200, `LEVEL ${levelNum}!`, '#ffd700', 32);
 }
 
-// Create office layout with better design
-function createOfficeLayout() {
+// Create office layout with elevators to other floors
+function createMultiRoomOffice() {
     walls = [];
     
-    // Outer walls with door gap
+    // Outer walls with elevator gaps
     walls.push({ x: 0, y: 0, width: 1000, height: 20 });
-    walls.push({ x: 0, y: 680, width: 1000, height: 20 });
-    walls.push({ x: 0, y: 0, width: 20, height: 700 });
+    walls.push({ x: 0, y: 680, width: 400, height: 20 }); // Left part of bottom wall
+    walls.push({ x: 600, y: 680, width: 400, height: 20 }); // Right part of bottom wall (elevator gap)
+    walls.push({ x: 0, y: 0, width: 20, height: 300 }); // Left wall top
+    walls.push({ x: 0, y: 400, width: 20, height: 300 }); // Left wall bottom (elevator gap)
     walls.push({ x: 980, y: 0, width: 20, height: 700 });
     
     // Front door area (gap in top wall)
@@ -312,9 +326,10 @@ function createOfficeLayout() {
     walls.push({ x: 800, y: 200, width: 20, height: 200 });
     walls.push({ x: 800, y: 400, width: 100, height: 20 });
     
-    // Break room walls
-    walls.push({ x: 830, y: 530, width: 150, height: 20 });
-    walls.push({ x: 830, y: 530, width: 20, height: 150 });
+    // Break room walls - with entrance on the left
+    walls.push({ x: 830, y: 530, width: 150, height: 20 }); // Top wall
+    walls.push({ x: 830, y: 620, width: 20, height: 60 }); // Left wall bottom part (leaving gap for door)
+    walls.push({ x: 830, y: 530, width: 20, height: 40 }); // Left wall top part (leaving gap for door)
     
     // Add decorative elements
     decorations = [
@@ -324,6 +339,29 @@ function createOfficeLayout() {
         { type: 'watercooler', x: 750, y: 100, width: 24, height: 30 },
         { type: 'printer', x: 450, y: 100, width: 30, height: 24 }
     ];
+    
+    // Add elevators/doorways
+    doorways.push({
+        x: 400,
+        y: 680,
+        width: 200,
+        height: 20,
+        type: 'elevator',
+        label: 'TO CAFETERIA',
+        destination: 'cafeteria',
+        color: '#4CAF50'
+    });
+    
+    doorways.push({
+        x: 0,
+        y: 300,
+        width: 20,
+        height: 100,
+        type: 'elevator',
+        label: 'TO EXECUTIVE',
+        destination: 'executive',
+        color: '#9C27B0'
+    });
 }
 
 // Create a Brad with specific properties
@@ -955,6 +993,27 @@ function update() {
         }
     }
     
+    // Check doorway transitions
+    doorways.forEach(door => {
+        if (player.x < door.x + door.width &&
+            player.x + player.width > door.x &&
+            player.y < door.y + door.height &&
+            player.y + player.height > door.y) {
+            
+            // Show transition message instead of actually changing rooms for now
+            createSoundEffect(canvas.width/2, 200, `${door.destination.toUpperCase()} COMING SOON!`, door.color, 20);
+            
+            // Push player away from doorway
+            if (door.width > door.height) {
+                // Horizontal doorway
+                player.y = door.y < canvas.height/2 ? door.y + door.height + 5 : door.y - player.height - 5;
+            } else {
+                // Vertical doorway
+                player.x = door.x < canvas.width/2 ? door.x + door.width + 5 : door.x - player.width - 5;
+            }
+        }
+    });
+    
     // Player movement
     let moveX = 0, moveY = 0;
     
@@ -1274,6 +1333,39 @@ function draw() {
         }
     });
     
+    // Draw doorways/elevators
+    doorways.forEach(door => {
+        // Draw glowing effect
+        const pulse = Math.sin(Date.now() * 0.003) * 0.3 + 0.7;
+        ctx.fillStyle = door.color + '40';
+        ctx.fillRect(door.x - 5, door.y - 5, door.width + 10, door.height + 10);
+        
+        // Draw doorway
+        ctx.fillStyle = door.color;
+        ctx.fillRect(door.x, door.y, door.width, door.height);
+        
+        // Draw darker center
+        ctx.fillStyle = '#000';
+        ctx.fillRect(door.x + 5, door.y + 5, door.width - 10, door.height - 10);
+        
+        // Draw label
+        ctx.save();
+        ctx.fillStyle = '#fff';
+        ctx.font = '8px "Press Start 2P"';
+        ctx.textAlign = 'center';
+        
+        if (door.width > door.height) {
+            // Horizontal doorway
+            ctx.fillText(door.label, door.x + door.width/2, door.y + door.height/2 + 3);
+        } else {
+            // Vertical doorway - rotate text
+            ctx.translate(door.x + door.width/2, door.y + door.height/2);
+            ctx.rotate(-Math.PI/2);
+            ctx.fillText(door.label, 0, 3);
+        }
+        ctx.restore();
+    });
+    
     // Draw coffee pickups
     coffees.forEach(coffee => {
         if (!coffee.collected) {
@@ -1467,24 +1559,56 @@ function draw() {
         const width = brad.width * scale;
         const height = brad.height * scale;
         
+        ctx.save();
         if (brad.growing) {
-            ctx.save();
             ctx.translate(brad.x + width/2, brad.y + height/2);
             ctx.scale(scale, scale);
             ctx.translate(-(brad.x + width/2), -(brad.y + height/2));
         }
         
+        // Shadow
         ctx.fillStyle = 'rgba(0,0,0,0.3)';
         ctx.fillRect(brad.x + 2, brad.y + height - 2, width - 4, 4);
         
-        ctx.fillStyle = brad.state === 'chase' ? '#c0392b' : 
-                       brad.state === 'distracted' ? '#f39c12' : 
-                       brad.slowed ? '#7f8c8d' : '#34495e';
-        ctx.fillRect(brad.x + 2 * scale, brad.y + 10 * scale, width - 4 * scale, height - 10 * scale);
+        // Body (suit)
+        ctx.fillStyle = brad.state === 'chase' ? '#8B0000' : 
+                       brad.state === 'distracted' ? '#CD853F' : 
+                       brad.slowed ? '#696969' : '#2F4F4F';
+        ctx.fillRect(brad.x + 2, brad.y + 10, width - 4, height - 10);
         
-        if (brad.growing) {
-            ctx.restore();
+        // Tie
+        ctx.fillStyle = brad.state === 'chase' ? '#FF0000' : '#DC143C';
+        ctx.fillRect(brad.x + width/2 - 2, brad.y + 10, 4, 8);
+        
+        // Face/Head
+        ctx.fillStyle = '#FDBCB4';
+        ctx.fillRect(brad.x + 4, brad.y + 2, width - 8, 10);
+        
+        // Hair (slicked back)
+        ctx.fillStyle = '#2F1B14';
+        ctx.fillRect(brad.x + 4, brad.y, width - 8, 4);
+        ctx.fillRect(brad.x + 2, brad.y + 1, width - 4, 2);
+        
+        // Eyes (angry)
+        ctx.fillStyle = brad.state === 'chase' ? '#FF0000' : '#000';
+        ctx.fillRect(brad.x + 6, brad.y + 5, 3, 2);
+        ctx.fillRect(brad.x + width - 9, brad.y + 5, 3, 2);
+        
+        // Angry eyebrows
+        ctx.fillStyle = '#000';
+        ctx.fillRect(brad.x + 5, brad.y + 4, 4, 1);
+        ctx.fillRect(brad.x + width - 9, brad.y + 4, 4, 1);
+        
+        // Mouth (frown or shouting)
+        if (brad.state === 'chase') {
+            ctx.fillStyle = '#000';
+            ctx.fillRect(brad.x + width/2 - 3, brad.y + 8, 6, 2);
+        } else {
+            ctx.fillStyle = '#000';
+            ctx.fillRect(brad.x + width/2 - 2, brad.y + 8, 4, 1);
         }
+        
+        ctx.restore();
         
         if (brad.state === 'chase') {
             ctx.strokeStyle = 'rgba(231, 76, 60, 0.2)';
@@ -1544,6 +1668,15 @@ function draw() {
         ctx.textAlign = 'left';
     });
     ctx.globalAlpha = 1;
+    
+    // Draw current area indicator
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.fillRect(canvas.width - 200, 10, 190, 30);
+    ctx.fillStyle = '#fff';
+    ctx.font = '12px "Press Start 2P"';
+    ctx.textAlign = 'right';
+    ctx.fillText('FLOOR 1: MAIN', canvas.width - 20, 28);
+    ctx.textAlign = 'left';
     
     // Draw game over screen
     if (gameOver) {
