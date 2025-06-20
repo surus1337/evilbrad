@@ -170,8 +170,8 @@ function initLevel(levelNum) {
         });
     }
     
-    // Create compliance traps (more on higher levels)
-    const numTraps = Math.min(levelNum, 5);
+    // Create compliance traps (start from level 3)
+    const numTraps = levelNum > 2 ? Math.min(levelNum - 2, 5) : 0;
     for (let i = 0; i < numTraps; i++) {
         complianceTraps.push({
             x: 150 + Math.random() * 700,
@@ -228,8 +228,8 @@ function initLevel(levelNum) {
         lawyer = null;
     }
     
-    // Create customer
-    if (levelNum > 1) {
+    // Create customer (start from level 3 instead of level 2)
+    if (levelNum > 2) {
         customer = {
             x: 100,
             y: 80,
@@ -246,6 +246,8 @@ function initLevel(levelNum) {
             computers[i].isRequired = true;
             customerRequirements.push(i);
         }
+    } else {
+        customer = null;
     }
     
     // Create Brads with adjusted speeds - gentler difficulty curve
@@ -281,6 +283,16 @@ function initLevel(levelNum) {
     
     // Level start message
     createSoundEffect(canvas.width/2, 200, `LEVEL ${levelNum}!`, '#ffd700', 32);
+    
+    // Debug: Log level details
+    console.log(`=== LEVEL ${levelNum} INITIALIZED ===`);
+    console.log(`Brads: ${brads.length}`);
+    brads.forEach((brad, i) => {
+        console.log(`  Brad ${i+1}: speed=${brad.speed}, sight=${brad.sightRange}, behavior=${brad.behavior}`);
+    });
+    console.log(`Computers: ${computers.length}`);
+    console.log(`Compliance traps: ${complianceTraps.length}`);
+    console.log(`Customer: ${customer ? 'Yes' : 'No'}`);
 }
 
 // Create office layout with elevators to other floors
